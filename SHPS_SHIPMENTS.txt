@@ -1,0 +1,20 @@
+CREATE OR REPLACE VIEW EDP_NP.CRT_SHPS.DAILY_SHIPMENT_REPORT  AS
+with U as (
+    select shipmentid, orderkey, max(shipdate) as max_shipdate from EDP_NP.LND_SHPS.daily_shipments_report_new
+    group by shipmentid, orderkey
+),
+BASE as (
+    select * from EDP_NP.LND_SHPS.daily_shipments_report_new
+),
+
+MAIN as (
+    select BASE.*, U.max_shipdate, ROW_NUMBER() OVER (PARTITION BY U.SHIPMENTID, U.ORDERKEY ORDER BY U.max_shipdate DESC) AS row_num
+    FROM BASE
+    LEFT JOIN U
+    ON BASE.SHIPMENTID = U.SHIPMENTID AND BASE.ORDERKEY = U.ORDERKEY
+)
+
+select * from main
+where row_num = 1;
+
+

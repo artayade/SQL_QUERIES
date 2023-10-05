@@ -1,0 +1,49 @@
+//select * from daily_orders_report_new
+//order by createdate desc;
+//
+//select * from orders_items_report_new;
+//
+create or replace view EDP_NP.CRT_SHPS.DAILY_ORDERS_REPORT  AS
+WITH U AS (
+    SELECT ORDERID,
+        MAX(modifydate) AS max_modify_date
+    FROM EDP_NP.LND_SHPS.DAILY_ORDERS_REPORT_NEW
+    GROUP BY ORDERID
+),
+BASE AS (
+    SELECT * 
+    FROM EDP_NP.LND_SHPS.DAILY_ORDERS_REPORT_NEW
+)
+
+SELECT
+    ORDERID,
+    BASE.ORDERNUMBER, 
+    BASE.ORDERDATE, 
+    BASE.CREATEDATE, 
+    max_modify_date,
+    BASE.PAYMENTDATE, 
+    BASE.ORDERSTATUS, 
+    BASE.CUSTOMERID, 
+    BASE.CUSTOMEREMAIL, 
+    BASE.BILLTO_NAME, 
+    BASE.BILLTO_COMPANY, 
+    BASE.BILLTO_ADDRESS, 
+    BASE.SHIPTO_NAME, 
+    BASE.SHIPTO_COMPANY, 
+    BASE.SHIPTO_ADDRESS, 
+    BASE.CARRIERCODE, 
+    BASE.SERVICECODE, 
+    BASE.PACKAGECODE, 
+    BASE.SHIPDATE, 
+    BASE.WEIGHT, 
+    BASE.WAREHOUSEID, 
+    BASE.STOREID
+FROM (
+    SELECT
+        BASE.*,
+        U.max_modify_date,
+        ROW_NUMBER() OVER (PARTITION BY U.ORDERID ORDER BY U.max_modify_date DESC) AS row_num
+    FROM U
+    JOIN BASE ON BASE.ORDERID = U.ORDERID
+) AS BASE
+WHERE BASE.row_num = 1;

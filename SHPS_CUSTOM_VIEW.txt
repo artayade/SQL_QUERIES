@@ -1,3 +1,4 @@
+//create or replace VIEW SHPS_CUSTOM_WEIGHT_PER_ITEM_VIEW
 with base_shipments as (
     select createdate, shipdate, shipmentid, orderid, orderkey, ordernumber, shipmentcost, carriercode, servicecode, shiptoname, weight, weightunits
     from DAILY_SHIPMENT_REPORT
@@ -41,8 +42,10 @@ final_view as (
     select shipdate, recipient, ordernumber, sum(items) as items, avg(shipping_paid) as shipping_paid, 
     avg(shipping_cost) as shipping_cost, avg(weight) as weight_oz, avg(weightunits) as weightunits 
     from cleaned_view_of_main_shipment_and_orders_join
-    group by shipdate, recipient, ordernumber
+    group by shipdate, recipient, ordernumber 
     order by shipdate asc
 )
 
-select * from final_view;
+select A.*, (A.weight_oz/A.items) as weight_per_item, (A.shipping_cost/weight_per_item) as cost_per_oz 
+from final_view as A
+where shipping_cost != 0;

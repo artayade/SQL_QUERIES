@@ -26,10 +26,23 @@ main_shipment_and_orders_join as (
     from main_orders as O
     left join base_shipments as S
     where O.shipdate=S.shipdate and O.ordernumber=S.ordernumber 
+),
+
+cleaned_view_of_main_shipment_and_orders_join as (
+    select shipdate, shiptoname as recipient, ORDERNUMBER, carriercode as provider, servicecode as service,
+    ORDERITEMQUANTITY as items, ORDERITEMSHIPPINGAMOUNT as Shipping_Paid, SHIPMENTCOST as Shipping_Cost,
+    Weight, WeightUnits
+    from main_shipment_and_orders_join
+    where recipient like 'Home%' and shipdate >= '2022-01-07' and shipdate <= '2023-05-31' 
+    order by shipdate asc
+),
+
+final_view as (
+    select shipdate, recipient, ordernumber, sum(items) as items, avg(shipping_paid) as shipping_paid, 
+    avg(shipping_cost) as shipping_cost, avg(weight) as weight_oz, avg(weightunits) as weightunits 
+    from cleaned_view_of_main_shipment_and_orders_join
+    group by shipdate, recipient, ordernumber
+    order by shipdate asc
 )
 
-select shipdate, shiptoname as recipient, ORDERNUMBER, carriercode as provider, servicecode as service,
-ORDERITEMQUANTITY as items, ORDERITEMSHIPPINGAMOUNT as Shipping_Paid, SHIPMENTCOST as Shipping_Cost,
-Weight, WeightUnits
-from main_shipment_and_orders_join
-where recipient like 'Home%';
+select * from final_view;

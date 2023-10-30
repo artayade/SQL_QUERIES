@@ -1,0 +1,44 @@
+create or replace view "EDP_NP"."CRT_SHPS"."SHPS_CUSTOM_WEIGHT_PER_ITEM_LOOKUP" as
+
+with base_shipments as (
+    select createdate, shipdate, shipmentid, orderid, orderkey, ordernumber, shipmentcost, carriercode, servicecode, shiptoname, weight, weightunits
+    from DAILY_SHIPMENT_REPORT
+),
+
+base_orders_items as (
+    select orderid, ordernumber, orderitemid, createdate, orderdate, orderitemquantity, IFNULL(ORDERITEMSHIPPINGAMOUNT, 0) as ORDERITEMSHIPPINGAMOUNT, orderitemsku, orderitemname  
+    from DAILY_ORDERS_ITEMS_REPORT
+),
+
+base_orders as (
+    select orderid, ordernumber, createdate, orderdate, orderstatus, shipdate 
+    from DAILY_ORDERS_REPORT
+),
+
+main_orders as (
+    select A.*, B.shipdate
+    from base_orders_items as A
+    left join base_orders as B
+    where A.orderdate=B.orderdate and A.orderid=B.orderid and A.ordernumber=B.ordernumber and B.orderstatus = 'shipped'
+),
+
+main_shipment_and_orders_join as (
+    select O.shipdate, O.ordernumber, O.orderitemid, O.orderitemsku, O.orderitemname, O.ORDERITEMQUANTITY, O.ORDERITEMSHIPPINGAMOUNT,
+    S.shipmentcost, S.carriercode, S.servicecode, S.shiptoname, S.weight, S.weightunits
+    from main_orders as O
+    left join base_shipments as S
+    where O.shipdate=S.shipdate and O.ordernumber=S.ordernumber 
+),
+
+cleaned_view_of_main_shipment_and_orders_join as (
+    select shipdate, shiptoname as recipient, ORDERNUMBER, orderitemid, orderitemsku, orderitemname, carriercode as provider, servicecode as service,
+    ORDERITEMQUANTITY as items, ORDERITEMSHIPPINGAMOUNT as Shipping_Paid, SHIPMENTCOST as Shipping_Cost,
+    Weight, WeightUnits
+    from main_shipment_and_orders_join
+    where recipient like 'Home%' and shipdate >= '2022-01-07' and shipdate <= '2023-05-31' 
+    order by shipdate asc
+)
+
+select A.* exclude(shipping_paid, shipping_Cost, weight, weightunits)
+from cleaned_view_of_main_shipment_and_orders_join as A
+where shipping_cost != 0;
